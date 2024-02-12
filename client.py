@@ -4,7 +4,7 @@ from client_chunk import ClientChunk
 from dataclasses import dataclass
 import json
 import pathlib
-
+from queue import Queue
 class Client:
     @dataclass
     class BitmapData:
@@ -22,8 +22,9 @@ class Client:
         self.overwrite = overwrite
         self.compress = compress
      
-    def _thread_proc(self, offset, size):
+    def _thread_proc(self, queue: Queue):
         try:
+            offset, size = queue.get()
             chunk = ClientChunk(self.connection_factory, offset, size, self.compress)
             data = chunk.process()
             return offset, size, data
@@ -53,14 +54,17 @@ class Client:
         if status_from_bitmap is None:    
             status_from_bitmap = self.BitmapData(total_size, self.chunk_size, self.threads, {}).__dict__
         futures = []
+        queue = Queue()
         with ThreadPoolExecutor(max_workers=self.threads) as executor:
+            
+            for offset in range(0, total_size, self.chunk_size):
+                if str(offset) in status_from_bitmap['processed']:
+                    progress_callback(status_from_bitmap['processed'][str(offset)], total_size)
+                    continue
+                size = min(total_size - offset, self.chunk_size)
+                queue.put((offset, size))
+                futures.append(executor.submit(self._thread_proc, queue))
             with open(self.write_to, 'w+b') as file:
-                for offset in range(0, total_size, self.chunk_size):
-                    if str(offset) in status_from_bitmap['processed']:
-                        progress_callback(status_from_bitmap['processed'][str(offset)], total_size)
-                        continue
-                    size = min(total_size - offset, self.chunk_size)
-                    futures.append(executor.submit(self._thread_proc, offset, size))
                 for future in as_completed(futures):
 
                     offset, size, data = future.result()
