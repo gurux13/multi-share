@@ -18,8 +18,11 @@ class ClientChunk:
             data = bytearray()
             while len(data) < size:
                 data.extend(connection.recv(size - len(data)))
+            connection.send(b'\x00')
+            connection.shutdown(socket.SHUT_WR)
             if self.compress:
                 data = decompress(data)
+            
         finally:
             if connection is not None:
                 connection.close()

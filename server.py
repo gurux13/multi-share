@@ -1,6 +1,7 @@
 from connection_factory import ConnectionFactory
 import pathlib
 from zlib import compress
+import socket
 class Server:
     def __init__(self, connection_factory: ConnectionFactory, file_path: str, compress: bool):
         self.connection_factory = connection_factory
@@ -17,10 +18,9 @@ class Server:
             data = file.read(size)
             if self.compress:
                 data = compress(data, 6)
-        conn.send(len(data).to_bytes(8, 'little'))
-        sent = 0
-        while sent < len(data):
-            sent += conn.send(data[sent:])
+        conn.sendall(len(data).to_bytes(8, 'little'))
+        conn.sendall(data)
+        conn.recv(1)
         conn.close()
         
     def run(self):
