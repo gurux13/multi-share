@@ -13,6 +13,7 @@ class ClientChunk:
         data = None
         try:
             connection = self.conn_factory.connect(self.offset)
+            connection.settimeout(15)
             connection.send(self.chunk_size.to_bytes(8, 'little'))
             size = int.from_bytes(connection.recv(8), 'little')
             data = bytearray()

@@ -28,7 +28,7 @@ class Client:
             data = chunk.process()
             return offset, size, data
         except Exception as e:
-            return offset, size, None
+            return offset, size, e
         
     def run(self, progress_callback):
         if pathlib.Path(self.write_to).exists() and not self.overwrite:
@@ -64,8 +64,8 @@ class Client:
                 for future in as_completed(futures):
 
                     offset, size, data = future.result()
-                    if data is None:
-                        print(f"Failed to download chunk at offset {offset}, retrying")
+                    if isinstance(data, Exception):
+                        print(f"Failed to download chunk at offset {offset}: {data}")
                         futures.append(executor.submit(self._thread_proc, offset, size))
                         continue
                     file.seek(offset)

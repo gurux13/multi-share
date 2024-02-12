@@ -10,6 +10,7 @@ class Server:
         
     def _on_connection(self, conn, addr, offset, size):
         try:
+            conn.settimeout(5)
             if offset == -1:
                 conn.send(pathlib.Path(self.file_path).stat().st_size.to_bytes(8, 'little'))
                 conn.close()
