@@ -10,16 +10,18 @@ class ClientChunk:
     
     def process(self):
         connection = None
-        result = None
+        data = None
         try:
             connection = self.conn_factory.connect(self.offset)
             connection.send(self.chunk_size.to_bytes(8, 'little'))
             size = int.from_bytes(connection.recv(8), 'little')
-            result = connection.recv(size, socket.MSG_WAITALL)
+            data = bytearray()
+            while len(data) < size:
+                data.extend(connection.recv(size - len(data)))
             if self.compress:
-                result = decompress(result)
+                data = decompress(data)
         finally:
             if connection is not None:
                 connection.close()
-        return result
+        return data
         

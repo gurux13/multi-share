@@ -18,6 +18,7 @@ def main():
     )
     parser.add_argument("-t", "--threads", help="Threads to use", type=int, default=16)
     parser.add_argument("-z", "--compress", help="Compress data", action="store_true")
+    parser.add_argument("-c", "--chunk", help="Chunk size", type=int, default=2**20)
 
     args = parser.parse_args()
     if args.read == args.write:
@@ -32,7 +33,7 @@ def main():
     elif args.write:
         client = Client(
             connection_factory,
-            102400,
+            args.chunk,
             args.write,
             args.force,
             args.write + ".bm",

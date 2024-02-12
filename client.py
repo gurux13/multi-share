@@ -60,6 +60,8 @@ class Client:
                     futures.append(executor.submit(self._thread_proc, offset, size))
                 for future in as_completed(futures):
                     if future.exception() is not None:
+                        print(f"Error: {future.exception()}")
+                        executor.shutdown(wait=False)
                         raise future.exception()
                     offset, data = future.result()
                     file.seek(offset)

@@ -18,7 +18,9 @@ class Server:
             if self.compress:
                 data = compress(data, 6)
         conn.send(len(data).to_bytes(8, 'little'))
-        conn.send(data)
+        sent = 0
+        while sent < len(data):
+            sent += conn.send(data[sent:])
         conn.close()
         
     def run(self):
