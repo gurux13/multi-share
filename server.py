@@ -9,19 +9,23 @@ class Server:
         self.compress = compress
         
     def _on_connection(self, conn, addr, offset, size):
-        if offset == -1:
-            conn.send(pathlib.Path(self.file_path).stat().st_size.to_bytes(8, 'little'))
+        try:
+            if offset == -1:
+                conn.send(pathlib.Path(self.file_path).stat().st_size.to_bytes(8, 'little'))
+                conn.close()
+                return
+            with open(self.file_path, 'rb') as file:
+                file.seek(offset)
+                data = file.read(size)
+                if self.compress:
+                    data = compress(data, 6)
+            conn.sendall(len(data).to_bytes(8, 'little'))
+            conn.sendall(data)
+            conn.recv(1)
+        except Exception as e:
+            print(f"Error processing connection from {addr}: {e}")
+        finally:
             conn.close()
-            return
-        with open(self.file_path, 'rb') as file:
-            file.seek(offset)
-            data = file.read(size)
-            if self.compress:
-                data = compress(data, 6)
-        conn.sendall(len(data).to_bytes(8, 'little'))
-        conn.sendall(data)
-        conn.recv(1)
-        conn.close()
         
     def run(self):
         self.connection_factory.bind()

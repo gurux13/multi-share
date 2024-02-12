@@ -23,9 +23,12 @@ class Client:
         self.compress = compress
      
     def _thread_proc(self, offset, size):
-        chunk = ClientChunk(self.connection_factory, offset, size, self.compress)
-        data = chunk.process()
-        return offset, data
+        try:
+            chunk = ClientChunk(self.connection_factory, offset, size, self.compress)
+            data = chunk.process()
+            return offset, size, data
+        except Exception as e:
+            return offset, size, None
         
     def run(self, progress_callback):
         if pathlib.Path(self.write_to).exists() and not self.overwrite:
@@ -59,11 +62,12 @@ class Client:
                     size = min(total_size - offset, self.chunk_size)
                     futures.append(executor.submit(self._thread_proc, offset, size))
                 for future in as_completed(futures):
-                    if future.exception() is not None:
-                        print(f"Error: {future.exception()}")
-                        executor.shutdown(wait=False)
-                        raise future.exception()
-                    offset, data = future.result()
+
+                    offset, size, data = future.result()
+                    if data is None:
+                        print(f"Failed to download chunk at offset {offset}, retrying")
+                        futures.append(executor.submit(self._thread_proc, offset, size))
+                        continue
                     file.seek(offset)
                     file.write(data)
                     progress_callback(len(data), total_size)
